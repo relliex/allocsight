@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="360" rx="10" fill="#0b0f19" stroke="#1e293b" stroke-width="2"/>
+
+  <!-- Header -->
+  <text x="36" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">ALLOCSIGHT INTERNAL EXECUTION PIPELINE</text>
+  <text x="380" y="40" font-family="Consolas, monospace" font-size="12" fill="#64748b">Header-Modular Architecture (src/alloc_*.hpp)</text>
+  <line x1="36" y1="54" x2="1164" y2="54" stroke="#1e293b" stroke-width="1.5"/>
+
+  <!-- Stage 1 -->
+  <g transform="translate(36, 78)">
+    <rect width="256" height="246" rx="8" fill="#111827" stroke="#0284c7" stroke-width="1.5"/>
+    <rect width="256" height="34" rx="8" fill="#0369a1"/>
+    <text x="16" y="22" font-family="Consolas, monospace" font-size="12" font-weight="700" fill="#ffffff">1. KERNEL I/O ENUMERATION</text>
+
+    <text x="16" y="60" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" fill="#38bdf8">Win32 Fast Directory Fetch</text>
+    <text x="16" y="80" font-family="Consolas, monospace" font-size="11" fill="#cbd5e1">FindFirstFileExW()</text>
+    <text x="16" y="96" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ FindExInfoBasic (skip 8.3)</text>
+    <text x="16" y="112" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ FIND_FIRST_EX_LARGE_FETCH</text>
+
+    <line x1="16" y1="128" x2="240" y2="128" stroke="#1e293b" stroke-width="1"/>
+
+    <text x="16" y="148" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" fill="#38bdf8">Physical Cluster Accounting</text>
+    <text x="16" y="168" font-family="Consolas, monospace" font-size="11" fill="#cbd5e1">GetCompressedFileSizeW()</text>
+    <text x="16" y="184" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Cloud Recall Zero-Cluster</text>
+    <text x="16" y="200" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ FindFirstStreamW() (ADS)</text>
+    <text x="16" y="216" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ IsReparseTagNameSurrogate</text>
+    <text x="16" y="234" font-family="Consolas, monospace" font-size="10" fill="#64748b">[alloc_scanner.hpp]</text>
+  </g>
+
+  <!-- Arrow 1->2 -->
+  <line x1="292" y1="201" x2="322" y2="201" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 2 -->
+  <g transform="translate(328, 78)">
+    <rect width="256" height="246" rx="8" fill="#111827" stroke="#4f46e5" stroke-width="1.5"/>
+    <rect width="256" height="34" rx="8" fill="#4338ca"/>
+    <text x="16" y="22" font-family="Consolas, monospace" font-size="12" font-weight="700" fill="#ffffff">2. CONCURRENT WORK QUEUE</text>
+
+    <text x="16" y="60" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" fill="#a5b4fc">Thread Pool Dispatcher</text>
+    <text x="16" y="80" font-family="Consolas, monospace" font-size="11" fill="#cbd5e1">ParallelScanner::scan()</text>
+    <text x="16" y="96" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ 8..16 Worker Threads</text>
+    <text x="16" y="112" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Local Node Batching</text>
+
+    <line x1="16" y1="128" x2="240" y2="128" stroke="#1e293b" stroke-width="1"/>
+
+    <text x="16" y="148" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" fill="#a5b4fc">In-Memory FsNode Tree</text>
+    <text x="16" y="168" font-family="Consolas, monospace" font-size="11" fill="#cbd5e1">FsNode::aggregateBottomUp()</text>
+    <text x="16" y="184" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Lock-Free Atomic Telemetry</text>
+    <text x="16" y="200" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ SeBackupPrivilege Token</text>
+    <text x="16" y="216" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Unaccounted System Delta</text>
+    <text x="16" y="234" font-family="Consolas, monospace" font-size="10" fill="#64748b">[alloc_types.hpp / scanner.hpp]</text>
+  </g>
+
+  <!-- Arrow 2->3 -->
+  <line x1="584" y1="201" x2="614" y2="201" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 3 -->
+  <g transform="translate(620, 78)">
+    <rect width="256" height="246" rx="8" fill="#111827" stroke="#0d9488" stroke-width="1.5"/>
+    <rect width="256" height="34" rx="8" fill="#0f766e"/>
+    <text x="16" y="22" font-family="Consolas, monospace" font-size="12" font-weight="700" fill="#ffffff">3. PREDICATE FILTER ENGINE</text>
+
+    <text x="16" y="60" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" fill="#5eead4">Iterative Pattern Matcher</text>
+    <text x="16" y="80" font-family="Consolas, monospace" font-size="11" fill="#cbd5e1">QueryFilter::wildcardMatch()</text>
+    <text x="16" y="96" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Two-Pointer Backtracking</text>
+    <text x="16" y="112" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ O(1) Auxiliary Stack Space</text>
+
+    <line x1="16" y1="128" x2="240" y2="128" stroke="#1e293b" stroke-width="1"/>
+
+    <text x="16" y="148" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" fill="#5eead4">Rule Vector Evaluation</text>
+    <text x="16" y="168" font-family="Consolas, monospace" font-size="11" fill="#cbd5e1">vector&lt;MetricPredicate&gt;</text>
+    <text x="16" y="184" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Allocated / Logical Bounds</text>
+    <text x="16" y="200" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Modified / Created / Access</text>
+    <text x="16" y="216" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Subtree Pruning &amp; Re-Sum</text>
+    <text x="16" y="234" font-family="Consolas, monospace" font-size="10" fill="#64748b">[alloc_filter.hpp]</text>
+  </g>
+
+  <!-- Arrow 3->4 -->
+  <line x1="876" y1="201" x2="906" y2="201" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 4 -->
+  <g transform="translate(912, 78)">
+    <rect width="252" height="246" rx="8" fill="#111827" stroke="#10b981" stroke-width="1.5"/>
+    <rect width="252" height="34" rx="8" fill="#047857"/>
+    <text x="16" y="22" font-family="Consolas, monospace" font-size="12" font-weight="700" fill="#ffffff">4. DIAGNOSTICS &amp; OUTPUT</text>
+
+    <text x="16" y="60" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" fill="#6ee7b7">Heuristic Space Analyzer</text>
+    <text x="16" y="80" font-family="Consolas, monospace" font-size="11" fill="#cbd5e1">SAFE vs. REVIEW Classifier</text>
+    <text x="16" y="96" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Sibling Extracted Archives</text>
+    <text x="16" y="112" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Package &amp; Shader Caches</text>
+
+    <line x1="16" y1="128" x2="236" y2="128" stroke="#1e293b" stroke-width="1"/>
+
+    <text x="16" y="148" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" fill="#6ee7b7">Multi-Modal Renderers</text>
+    <text x="16" y="168" font-family="Consolas, monospace" font-size="11" fill="#cbd5e1">CLI Tree / Top-N / Categories</text>
+    <text x="16" y="184" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Clickable file:/// Markdown</text>
+    <text x="16" y="200" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Structured JSON for Agents</text>
+    <text x="16" y="216" font-family="Consolas, monospace" font-size="11" fill="#94a3b8">+ Percent-Encoded URI Links</text>
+    <text x="16" y="234" font-family="Consolas, monospace" font-size="10" fill="#64748b">[alloc_views.hpp]</text>
+  </g>
+</svg>

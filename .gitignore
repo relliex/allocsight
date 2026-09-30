@@ -1,0 +1,16 @@
+# Build directories & object files
+build/
+cmake-build-*/
+*.o
+*.obj
+*.pdb
+*.log
+
+# Compiled binaries
+*.exe
+*.dll
+
+# Local scan reports & user-specific outputs (prevent accidental privacy leaks)
+*report*.md
+*cleanup*.md
+*.json

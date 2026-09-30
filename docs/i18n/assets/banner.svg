@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" width="1200" height="280">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f19"/>
+      <stop offset="55%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1e293b" stroke-width="0.75"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="280" rx="12" fill="url(#bgGrad)"/>
+  <rect width="1200" height="280" rx="12" fill="url(#grid)" opacity="0.55"/>
+  <rect x="0" y="274" width="1200" height="6" fill="url(#accentGrad)"/>
+
+  <!-- Left Geometric Treemap / Cluster Allocation Icon -->
+  <g transform="translate(64, 52)">
+    <rect x="0" y="0" width="176" height="176" rx="14" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+    <!-- Cluster blocks representing proportional disk allocation -->
+    <rect x="14" y="14" width="92" height="92" rx="6" fill="#0284c7" opacity="0.9"/>
+    <text x="24" y="38" font-family="Consolas, 'SFMono-Regular', monospace" font-size="11" font-weight="700" fill="#e0f2fe">CLUSTER_00</text>
+    <text x="24" y="92" font-family="Consolas, 'SFMono-Regular', monospace" font-size="16" font-weight="700" fill="#ffffff">64.2%</text>
+
+    <rect x="114" y="14" width="48" height="54" rx="6" fill="#4f46e5" opacity="0.9"/>
+    <text x="122" y="46" font-family="Consolas, 'SFMono-Regular', monospace" font-size="11" font-weight="700" fill="#e0e7ff">18%</text>
+
+    <rect x="114" y="76" width="48" height="30" rx="5" fill="#059669" opacity="0.9"/>
+    <rect x="14" y="114" width="58" height="48" rx="6" fill="#0d9488" opacity="0.85"/>
+    <text x="24" y="143" font-family="Consolas, 'SFMono-Regular', monospace" font-size="11" font-weight="700" fill="#ccfbf1">11%</text>
+
+    <rect x="80" y="114" width="44" height="48" rx="6" fill="#334155"/>
+    <rect x="132" y="114" width="30" height="21" rx="4" fill="#475569"/>
+    <rect x="132" y="141" width="30" height="21" rx="4" fill="#38bdf8" opacity="0.7"/>
+  </g>
+
+  <!-- Title & Subtitle -->
+  <g transform="translate(276, 86)">
+    <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2.5" fill="#38bdf8">SYSTEMS DIAGNOSTICS &amp; STORAGE TELEMETRY</text>
+    <text x="0" y="54" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="52" font-weight="800" letter-spacing="-1" fill="#f8fafc">AllocSight</text>
+    <text x="275" y="54" font-family="Consolas, 'SFMono-Regular', monospace" font-size="18" font-weight="500" fill="#64748b">v1.0.0</text>
+    <text x="0" y="92" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="18" font-weight="400" fill="#94a3b8">High-Concurrency NTFS Cluster Allocation &amp; Automated Space Reclamation CLI for Windows</text>
+
+    <!-- Technical Pills -->
+    <g transform="translate(0, 118)">
+      <rect x="0" y="0" width="148" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="74" y="18" text-anchor="middle" font-family="Consolas, 'SFMono-Regular', monospace" font-size="12" fill="#e2e8f0">Native Win32 C++17</text>
+
+      <rect x="160" y="0" width="182" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="251" y="18" text-anchor="middle" font-family="Consolas, 'SFMono-Regular', monospace" font-size="12" fill="#38bdf8">FIND_FIRST_EX_LARGE_FETCH</text>
+
+      <rect x="354" y="0" width="166" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="437" y="18" text-anchor="middle" font-family="Consolas, 'SFMono-Regular', monospace" font-size="12" fill="#a5b4fc">16-Thread Work Queue</text>
+
+      <rect x="532" y="0" width="154" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="609" y="18" text-anchor="middle" font-family="Consolas, 'SFMono-Regular', monospace" font-size="12" fill="#34d399">Zero Dependencies</text>
+
+      <rect x="698" y="0" width="118" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="757" y="18" text-anchor="middle" font-family="Consolas, 'SFMono-Regular', monospace" font-size="12" fill="#f8fafc">MIT License</text>
+    </g>
+  </g>
+</svg>
