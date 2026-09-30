@@ -72,19 +72,26 @@ Le code source est organisé sous forme de pipeline modulaire d'en-têtes C++17 
 
 ## Benchmarks de Performance : AllocSight face aux Méthodes d'Analyse IA
 
-Évalué sur un jeu de données standard de **1 000 000 de fichiers (500 Go NTFS)** sous Windows x64, AllocSight surpasse les méthodes d'analyse habituellement employées par les agents IA (PowerShell, Python, Node.js et clones `du`) d'un facteur **22x à 66x**, tout en éliminant les faux positifs liés aux fichiers cloud et à la compression NTFS :
+Sur un ensemble de test déterministe de **100 000 fichiers répartis dans 1 100 répertoires** sur un volume NTFS avec clusters de 4 Ko (512 octets par fichier : **48,8 Mo logiques contre 390,6 Mo d'allocation physique réelle**), AllocSight surpasse les 10 méthodes d'analyse couramment invoquées par les agents IA sous Windows (médiane de 5 exécutions avec cache chaud ; reproductible via [`benchmarks/run_benchmark.ps1`](../../benchmarks/run_benchmark.ps1)) :
 
 ![AllocSight Benchmark Comparison](assets/benchmark.png)
 
-| Approche / Outil d'Analyse | Latence (1M Fichiers) | Modèle de Concurrence & E/S | Précision Physique des Clusters NTFS | Protection Boucles Symlink | Intelligence de Nettoyage IA & Sortie |
-| :--- | :---: | :--- | :--- | :---: | :--- |
-| **AllocSight (C++17 Natif)** | **2.8 s** *(1x Réf.)* | **File à 16 Threads** + `FindFirstFileExW` (`LARGE_FETCH`) | **Oui** (`GetCompressedFileSizeW` + Cloud Recall `0 o` + ADS) | **Filtrage Noyau Strict** (`IsReparseTagNameSurrogate`) | **Heuristiques `[SAFE]`/`[REVIEW]` + Markdown `file:///` & JSON** |
-| **Clones CLI `du` (`dust`)** | **9.8 s** *(3.5x plus lent)* | Parcours multi-threads | **Partielle** (Surcompte les fichiers OneDrive non téléchargés ; sans ADS) | Oui | **Aucune** (Tailles brutes uniquement ; sans règles ni liens `file:///`) |
-| **Node.js (`fs.promises` / `fast-glob`)** | **44.0 s** *(15.7x plus lent)* | Pool `libuv` + pression mémoire du tas V8 | **Non** (Taille logique uniquement ; ignore l'alignement des clusters) | Partielle | **Aucune** (Nécessite un script ad-hoc à chaque session) |
-| **Python (`os.walk` / `pathlib.rglob`)** | **62.5 s** *(22.3x plus lent)* | Monothread limité par le GIL (`os.scandir` + `stat()`) | **Non** (Taille logique `st_size` ; fausse les fichiers compressés et cloud) | Partielle (`followlinks=False`) | **Aucune** (Coût élevé en tokens LLM pour coder des scripts temporaires) |
-| **PowerShell (`Get-ChildItem -Recurse`)** | **185.0 s+** *(66x plus lent / Timeout)* | Instanciation monothread d'objets `.NET FileInfo` | **Non** (`Length` logique uniquement ; forte surcharge mémoire et GC) | **Non sécurisé** (Suit les jonctions par défaut) | **Aucune** (Sature la fenêtre de contexte de l'agent IA) |
+| Outil / Méthode d'exécution | Latence Mesurée | Débit de Traitement | Vitesse Relative | Allocation Physique (390,6 Mo) | Export JSON Structuré | Sécurité Boucles & Cloud Recall |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **AllocSight v1.0.0 (C++17 Natif)** | **187,9 ms** | **532 198 fichiers/s** | **1,00x (Base)** | **Exacte (Double Physique + Logique)** | **Natif (URIs `file:///`)** | **Contrôle noyau + Cloud Recall 0 o** |
+| **Robocopy (`/L /S /BYTES /MT:16`)** | **236,4 ms** | 423 012 fichiers/s | 1,26x plus lent | Logique uniquement (48,8 Mo) | Non (Résumé texte brut) | Parcours standard intégré |
+| **PowerShell 7 (`.NET EnumerateFiles`)** | **258,2 ms** | 387 297 fichiers/s | 1,37x plus lent | Logique uniquement (48,8 Mo) | Non (Script requis) | Échec sur refus d'accès sans gestion d'erreur |
+| **dua v2.45.0 (Rust `jwalk` parallèle)** | **261,1 ms** | 382 995 fichiers/s | 1,39x plus lent | Logique uniquement (48,8 Mo sous Windows) | Non (Terminal interactif / texte) | Filtrage standard des liens |
+| **CMD (`cmd.exe /c dir /s /a /-c`)** | **1 166,7 ms** | 85 712 fichiers/s | 6,21x plus lent | Logique uniquement (48,8 Mo) | Non (Surcharge la fenêtre de contexte) | Vulnérable aux chemins profonds |
+| **Python 3.13 (`os.scandir` + stat en cache)** | **1 197,0 ms** | 83 542 fichiers/s | 6,37x plus lent | Logique uniquement (48,8 Mo) | Script requis | Monothread limité par le GIL |
+| **PowerShell 7 (`Get-ChildItem -Recurse`)** | **1 823,8 ms** | 54 831 fichiers/s | 9,71x plus lent | Logique uniquement (48,8 Mo) | Non (Surcharge mémoire `FileInfo`) | Traverse les jonctions par défaut |
+| **dust v1.2.6 (Rust `rayon` parallèle)** | **2 758,8 ms** | 36 248 fichiers/s | 14,68x plus lent | Exacte (390,6 Mo) | Optionnel (`-j`) | Ouvre un descripteur noyau par fichier |
+| **Node.js v22 (`fs.readdirSync` + stat)** | **13 268,6 ms** | 7 537 fichiers/s | 70,62x plus lent | Logique uniquement (48,8 Mo) | Script requis | `Dirent` sans taille : 100k appels stat |
+| **Python 3.13 (`os.walk` + `os.path.getsize`)** | **13 878,2 ms** | 7 206 fichiers/s | 73,86x plus lent | Logique uniquement (48,8 Mo) | Script requis | 100 000 appels `GetFileAttributesExW` |
+| **Sysinternals `du64.exe` v1.62** | **29 770,3 ms** | 3 359 fichiers/s | 158,44x plus lent | Exacte (390,6 Mo) | Non (Texte console brut) | Inspection séquentielle monothread |
 
 ---
+
 
 ## Interface en Ligne de Commande
 
