@@ -72,23 +72,23 @@ El código fuente está organizado como una tubería modular de cabeceras C++17 
 
 ## Pruebas de Rendimiento: Comparativa con Métodos Actuales de Escaneo por IA
 
-En una prueba determinista sobre un volumen NTFS con clústeres de 4 KB que contiene **100.000 archivos distribuidos en 1.100 directorios** (512 bytes por archivo: **48,8 MB lógicos frente a 390,6 MB de ocupación física real**), AllocSight superó a los 10 métodos de escaneo habitualmente ejecutados por agentes de IA en Windows (mediana de 5 ejecuciones con caché caliente; reproducible mediante [`benchmarks/run_benchmark.ps1`](../../benchmarks/run_benchmark.ps1)):
+En una prueba determinista sobre un volumen NTFS con clústeres de 4 KB que contiene **100.000 archivos distribuidos en 1.100 directorios** (512 bytes por archivo: **48,8 MB lógicos frente a 390,6 MB de ocupación física real**), se midió la latencia de 11 herramientas en Windows (mediana de 5 ejecuciones con caché caliente; reproducible mediante [`benchmarks/run_benchmark.ps1`](../../benchmarks/run_benchmark.ps1)):
 
 ![AllocSight Benchmark Comparison](assets/benchmark.png)
 
 | Herramienta / Método | Latencia Medida | Rendimiento | Velocidad Relativa | Asignación Física (390,6 MB) | Salida JSON Estructurada | Seguridad contra Bucles y Cloud |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **AllocSight v1.0.0 (C++17 Nativo)** | **187,9 ms** | **532.198 archivos/s** | **1,00x (Base)** | **Exacta (Física + Lógica)** | **Nativa (`file:///` URIs)** | **Protección por kernel + Cloud Recall 0 B** |
-| **Robocopy (`/L /S /BYTES /MT:16`)** | **236,4 ms** | 423.012 archivos/s | 1,26x más lento | Solo lógica (48,8 MB) | No (Solo resumen plano) | Recorrido estándar integrado |
-| **PowerShell 7 (`.NET EnumerateFiles`)** | **258,2 ms** | 387.297 archivos/s | 1,37x más lento | Solo lógica (48,8 MB) | No (Requiere script) | Falla ante denegación de permisos sin catch |
-| **dua v2.45.0 (Rust `jwalk` paralelo)** | **261.1 ms** | 382.995 archivos/s | 1,39x más lento | Solo lógica (48,8 MB en Windows) | No (Terminal interactivo / texto) | Filtro estándar de enlaces |
-| **CMD (`cmd.exe /c dir /s /a /-c`)** | **1.166,7 ms** | 85.712 archivos/s | 6,21x más lento | Solo lógica (48,8 MB) | No (Desborda contexto de IA) | Inseguro ante rutas profundas |
-| **Python 3.13 (`os.scandir` + stat en caché)** | **1.197,0 ms** | 83.542 archivos/s | 6,37x más lento | Solo lógica (48,8 MB) | Requiere script | Monohilo limitado por GIL |
-| **PowerShell 7 (`Get-ChildItem -Recurse`)** | **1.823,8 ms** | 54.831 archivos/s | 9,71x más lento | Solo lógica (48,8 MB) | No (Sobrecarga de `FileInfo`) | Sigue junctions por defecto; bucles |
-| **dust v1.2.6 (Rust `rayon` paralelo)** | **2.758,8 ms** | 36.248 archivos/s | 14,68x más lento | Exacta (390,6 MB) | Opcional (`-j`) | Abre identificador kernel por archivo en Win32 |
-| **Node.js v22 (`fs.readdirSync` + stat)** | **13.268,6 ms** | 7.537 archivos/s | 70,62x más lento | Solo lógica (48,8 MB) | Requiere script | `Dirent` carece de tamaño; 100k llamadas stat |
-| **Python 3.13 (`os.walk` + `os.path.getsize`)** | **13.878,2 ms** | 7.206 archivos/s | 73,86x más lento | Solo lógica (48,8 MB) | Requiere script | 100.000 llamadas `GetFileAttributesExW` |
-| **Sysinternals `du64.exe` v1.62** | **29.770,3 ms** | 3.359 archivos/s | 158,44x más lento | Exacta (390,6 MB) | No (Solo texto de consola) | Inspección de flujos monohilo por archivo |
+| **dua v2.45.0 (Rust `jwalk` paralelo)** | **142,7 ms** | **700.771 archivos/s** | **0,72x (1,39x más rápido)** | Solo lógica (48,8 MB en Windows) | No (TUI interactivo / texto) | Filtro estándar de enlaces |
+| **AllocSight v1.0.0 (C++17 Nativo)** | **199,1 ms** | **502.260 archivos/s** | **1,00x (Base)** | **Exacta (Física + Lógica)** | **Nativa (`file:///` URIs)** | **Protección por kernel + Cloud Recall 0 B** |
+| **Robocopy (`/L /S /BYTES /MT:16`)** | **223,7 ms** | 447.027 archivos/s | 1,12x más lento | Solo lógica (48,8 MB) | No (Solo resumen plano) | Recorrido estándar integrado |
+| **PowerShell 7 (`.NET EnumerateFiles`)** | **398,6 ms** | 250.878 archivos/s | 2,00x más lento | Solo lógica (48,8 MB) | No (Requiere script) | Falla ante denegación de permisos sin catch |
+| **Python 3.13 (`os.scandir` + stat en caché)** | **420,4 ms** | 237.869 archivos/s | 2,11x más lento | Solo lógica (48,8 MB) | Requiere script | Monohilo limitado por GIL |
+| **CMD (`cmd.exe /c dir /s /a /-c`)** | **1.172,5 ms** | 85.288 archivos/s | 5,89x más lento | Solo lógica (48,8 MB) | No (Desborda contexto de IA) | Inseguro ante rutas profundas |
+| **PowerShell 7 (`Get-ChildItem -Recurse`)** | **2.361,9 ms** | 42.339 archivos/s | 11,86x más lento | Solo lógica (48,8 MB) | No (Sobrecarga de `FileInfo`) | Sigue junctions por defecto; bucles |
+| **dust v1.2.6 (Rust `rayon` paralelo)** | **3.313,3 ms** | 30.181 archivos/s | 16,64x más lento | Exacta (390,6 MB) | Opcional (`-j`) | Abre identificador kernel por archivo en Win32 |
+| **Node.js v22 (`fs.readdirSync` + stat)** | **19.791,8 ms** | 5.053 archivos/s | 99,41x más lento | Solo lógica (48,8 MB) | Requiere script | `Dirent` carece de tamaño; 100k llamadas stat |
+| **Python 3.13 (`os.walk` + `os.path.getsize`)** | **20.361,3 ms** | 4.911 archivos/s | 102,27x más lento | Solo lógica (48,8 MB) | Requiere script | 100.000 llamadas `GetFileAttributesExW` |
+| **Sysinternals `du64.exe` v1.62** | **43.204,1 ms** | 2.315 archivos/s | 217,00x más lento | Exacta (390,6 MB) | No (Solo texto de consola) | Inspección de flujos monohilo por archivo |
 
 ---
 
