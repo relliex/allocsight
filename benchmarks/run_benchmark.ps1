@@ -126,7 +126,7 @@ function Measure-Scanner([string]$Name, [int]$Iterations, [scriptblock]$Action) 
 
 Write-Host "[2/3] Running Warm-Cache Benchmarks ($Runs runs per tool) ..." -ForegroundColor Cyan
 $results = @()
-$results += Measure-Scanner "AllocSight v1.0.0 (tree -d 1 -j -q)" $Runs { & $AllocExe tree $CorpusDir -d 1 -j -q }
+$results += Measure-Scanner "AllocSight v1.1.0 (tree -d 1 -j -q)" $Runs { & $AllocExe tree $CorpusDir -d 1 -j -q }
 $results += Measure-Scanner "Robocopy (/L /MT:16 /S /BYTES)" $Runs { robocopy.exe $CorpusDir NULL /L /S /NJH /BYTES /MT:16 /NFL /NDL /NP }
 $results += Measure-Scanner "PowerShell 7 (.NET EnumerateFiles)" $Runs {
     $sum = 0L

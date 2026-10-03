@@ -1,4 +1,4 @@
-![AllocSight Banner](assets/banner.png)
+![AllocSight Banner](assets/banner.png?v=1.1.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0284c7.svg?style=flat-square)](../../LICENSE)
 [![Standard: C++17](https://img.shields.io/badge/C%2B%2B-17-4f46e5.svg?style=flat-square)](../../src/allocsight.cpp)
@@ -74,7 +74,7 @@
 
 عند تقييم الأداء على مجموعة اختبار محددة تضم **100,000 ملف عبر 1,100 مجلد** على وحدة تخزين NTFS بحجم مجموعة 4 كيلوبايت (512 بايت لكل ملف: **48.8 ميجابايت بيانات منطقية مقابل 390.6 ميجابايت تخصيص فيزيائي فعلي**)، تم قياس أداء 11 أداة على نظام Windows (متوسط 5 جولات بذاكرة تخزين مؤقت دافئة؛ يمكن إعادة إنتاجه عبر [`benchmarks/run_benchmark.ps1`](../../benchmarks/run_benchmark.ps1)):
 
-![AllocSight Benchmark Comparison](assets/benchmark.png)
+![AllocSight Benchmark Comparison](assets/benchmark.png?v=1.1.0)
 
 | الأداة / طريقة الفحص | زمن التنفيذ الفعلي | معدل الإنتاجية | السرعة النسبية | تخصيص المجموعات الفيزيائي (390.6 ميجابايت) | إخراج JSON مهيكل | الحماية من الحلقات والملفات السحابية |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |

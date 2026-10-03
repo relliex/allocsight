@@ -1,4 +1,4 @@
-![AllocSight Banner](assets/banner.png)
+![AllocSight Banner](assets/banner.png?v=1.1.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0284c7.svg?style=flat-square)](LICENSE)
 [![Standard: C++17](https://img.shields.io/badge/C%2B%2B-17-4f46e5.svg?style=flat-square)](src/allocsight.cpp)
@@ -76,7 +76,7 @@ When AI coding agents (such as Claude Code, Cursor, Codex, Antigravity, or Copil
 
 To evaluate real-world performance with 100% rigor and zero fabrication, a deterministic test corpus of **100,000 files across 1,100 directories** was generated on an NTFS volume with default 4 KB clusters (512 bytes per file: **48.8 MB logical data vs. 390.6 MB physical cluster allocation**). Wall-clock latency was measured across all tools and configurations under identical warm-cache conditions (median of 5 runs; reproducible via [`benchmarks/run_benchmark.ps1`](benchmarks/run_benchmark.ps1)):
 
-![AllocSight Benchmark Comparison](assets/benchmark.png)
+![AllocSight Benchmark Comparison](assets/benchmark.png?v=1.1.0)
 
 | Tool / Execution Method | Wall-Clock Latency | Throughput | Relative Speed | Physical Cluster Size (390.6 MB) | Structured JSON Output | Loop & Cloud Recall Safety |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |

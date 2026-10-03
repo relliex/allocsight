@@ -1,4 +1,4 @@
-![AllocSight Banner](assets/banner.png)
+![AllocSight Banner](assets/banner.png?v=1.1.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0284c7.svg?style=flat-square)](../../LICENSE)
 [![Standard: C++17](https://img.shields.io/badge/C%2B%2B-17-4f46e5.svg?style=flat-square)](../../src/allocsight.cpp)
@@ -74,7 +74,7 @@ El código fuente está organizado como una tubería modular de cabeceras C++17 
 
 En una prueba determinista sobre un volumen NTFS con clústeres de 4 KB que contiene **100.000 archivos distribuidos en 1.100 directorios** (512 bytes por archivo: **48,8 MB lógicos frente a 390,6 MB de ocupación física real**), se midió la latencia de 11 herramientas en Windows (mediana de 5 ejecuciones con caché caliente; reproducible mediante [`benchmarks/run_benchmark.ps1`](../../benchmarks/run_benchmark.ps1)):
 
-![AllocSight Benchmark Comparison](assets/benchmark.png)
+![AllocSight Benchmark Comparison](assets/benchmark.png?v=1.1.0)
 
 | Herramienta / Método | Latencia Medida | Rendimiento | Velocidad Relativa | Asignación Física (390,6 MB) | Salida JSON Estructurada | Seguridad contra Bucles y Cloud |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |

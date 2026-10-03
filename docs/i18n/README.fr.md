@@ -1,4 +1,4 @@
-![AllocSight Banner](assets/banner.png)
+![AllocSight Banner](assets/banner.png?v=1.1.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0284c7.svg?style=flat-square)](../../LICENSE)
 [![Standard: C++17](https://img.shields.io/badge/C%2B%2B-17-4f46e5.svg?style=flat-square)](../../src/allocsight.cpp)
@@ -74,7 +74,7 @@ Le code source est organisé sous forme de pipeline modulaire d'en-têtes C++17 
 
 Sur un ensemble de test déterministe de **100 000 fichiers répartis dans 1 100 répertoires** sur un volume NTFS avec clusters de 4 Ko (512 octets par fichier : **48,8 Mo logiques contre 390,6 Mo d'allocation physique réelle**), 11 outils ont été mesurés sous Windows (médiane de 5 exécutions avec cache chaud ; reproductible via [`benchmarks/run_benchmark.ps1`](../../benchmarks/run_benchmark.ps1)) :
 
-![AllocSight Benchmark Comparison](assets/benchmark.png)
+![AllocSight Benchmark Comparison](assets/benchmark.png?v=1.1.0)
 
 | Outil / Méthode d'exécution | Latence Mesurée | Débit de Traitement | Vitesse Relative | Allocation Physique (390,6 Mo) | Export JSON Structuré | Sécurité Boucles & Cloud Recall |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |

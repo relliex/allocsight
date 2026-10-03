@@ -1,4 +1,4 @@
-![AllocSight Banner](assets/banner.png)
+![AllocSight Banner](assets/banner.png?v=1.1.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0284c7.svg?style=flat-square)](../../LICENSE)
 [![Standard: C++17](https://img.shields.io/badge/C%2B%2B-17-4f46e5.svg?style=flat-square)](../../src/allocsight.cpp)
@@ -74,7 +74,7 @@
 
 На эталонном наборе данных из **100 000 файлов в 1 100 каталогах** на томе NTFS с кластерами 4 КБ (512 байт на файл: **48,8 МБ логических данных против 390,6 МБ физического объема**), была измерена задержка 11 инструментов (медиана 5 запусков с горячим кэшем; воспроизводимо через [`benchmarks/run_benchmark.ps1`](../../benchmarks/run_benchmark.ps1)):
 
-![AllocSight Benchmark Comparison](assets/benchmark.png)
+![AllocSight Benchmark Comparison](assets/benchmark.png?v=1.1.0)
 
 | Инструмент / Метод сканирования | Время выполнения | Скорость (файлов/с) | Относительное время | Физические кластеры (390,6 МБ) | Структурированный вывод JSON | Защита от циклов и Cloud Recall |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |

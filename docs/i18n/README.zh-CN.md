@@ -1,4 +1,4 @@
-![AllocSight Banner](assets/banner.png)
+![AllocSight Banner](assets/banner.png?v=1.1.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-0284c7.svg?style=flat-square)](../../LICENSE)
 [![Standard: C++17](https://img.shields.io/badge/C%2B%2B-17-4f46e5.svg?style=flat-square)](../../src/allocsight.cpp)
@@ -76,7 +76,7 @@
 
 为了提供 100% 真实、严禁作弊、完全可复现的对比数据，我们在配置 4 KB 簇大小的 NTFS 固态硬盘上生成了包含 **100,000 个文件、1,100 个目录** 的确定性基准测试语料库（每个文件 512 字节：**逻辑数据 48.8 MB，真实物理簇占用 390.6 MB**）。在完全相同的热缓存环境下对所有工具与核心配置进行了基准实测（中位数取 5 次运行，可通过 [`benchmarks/run_benchmark.ps1`](../../benchmarks/run_benchmark.ps1) 完整复现）：
 
-![AllocSight Benchmark Comparison](assets/benchmark.png)
+![AllocSight Benchmark Comparison](assets/benchmark.png?v=1.1.0)
 
 | 扫盘方案 / 工具类型 | 扫描实测耗时 | 文件吞吐率 | 相对耗时倍率 | 物理簇核算 (390.6 MB) | 结构化 JSON 输出 | 死循环与云占位安全 |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
