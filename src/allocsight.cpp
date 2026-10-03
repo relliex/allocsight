@@ -30,7 +30,7 @@ static int64_t parseSizeOption(const std::string& raw) {
 static void printBannerHelp() {
     std::cout <<
 R"(================================================================================
- AllocSight v1.0.0 - High-Concurrency Disk Allocation & AI Space Cleanup CLI
+ AllocSight v1.1.0 - High-Concurrency Disk Allocation & AI Space Cleanup CLI
  License: MIT (Zero-Dependency Native Win32 C++17 Implementation)
 ================================================================================
 
@@ -52,6 +52,7 @@ OPTIONS:
       --files              Include only regular files in top/tree
       --folders            Include only directories in top/tree
       --ads                Inspect NTFS Alternate Data Streams (FindFirstStreamW)
+      --hardlinks          Deduplicate NTFS hard links (prevents WinSxS double counting)
       --logical            Rank/display by logical size instead of cluster size
   -j, --json               Emit structured JSON (with file:/// URIs) for AI agents
   -q, --quiet              Suppress stderr scan telemetry summary
@@ -69,6 +70,7 @@ FILTER SYNTAX EXAMPLES:
 
 int wmain(int argc, wchar_t* argv[]) {
     SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
     if (argc <= 1) {
         printBannerHelp();
@@ -86,15 +88,21 @@ int wmain(int argc, wchar_t* argv[]) {
         return 0;
     }
     if (cmd == "version" || cmd == "-v" || cmd == "--version") {
-        std::cout << "AllocSight v1.0.0 (MIT License)\n";
+        std::cout << "AllocSight v1.1.0 (MIT License)\n";
         return 0;
     }
 
-    size_t idx = 1;
-    if (cmd != "drives" && cmd != "tree" && cmd != "top" &&
-        cmd != "categories" && cmd != "analyze" && cmd != "report" && cmd != "scan") {
-        cmd = "tree";
-        idx = 0;
+    cmd = "tree";
+    size_t cmdArgIdx = static_cast<size_t>(-1);
+
+    for (size_t i = 0; i < args.size(); ++i) {
+        std::string s = asciiLower(wideToUtf8(args[i]));
+        if (s == "drives" || s == "tree" || s == "top" ||
+            s == "categories" || s == "analyze" || s == "report" || s == "scan") {
+            cmd = s;
+            cmdArgIdx = i;
+            break;
+        }
     }
 
     ScanConfig scanCfg{};
@@ -103,7 +111,8 @@ int wmain(int argc, wchar_t* argv[]) {
     std::wstring outputPath;
     std::vector<std::wstring> positional;
 
-    for (; idx < args.size(); ++idx) {
+    for (size_t idx = 0; idx < args.size(); ++idx) {
+        if (idx == cmdArgIdx) continue;
         std::string a = wideToUtf8(args[idx]);
         if ((a == "-f" || a == "--filter") && idx + 1 < args.size()) {
             filterExpr = wideToUtf8(args[++idx]);
@@ -123,6 +132,8 @@ int wmain(int argc, wchar_t* argv[]) {
             renderOpts.dirsOnly = true;
         } else if (a == "--ads") {
             scanCfg.includeAltStreams = true;
+        } else if (a == "--hardlinks") {
+            scanCfg.detectHardLinks = true;
         } else if (a == "--logical") {
             renderOpts.useLogical = true;
         } else if (a == "-j" || a == "--json") {
@@ -166,8 +177,12 @@ int wmain(int argc, wchar_t* argv[]) {
     if (!renderOpts.jsonOutput && !scanCfg.quietMode) {
         std::cerr << "[AllocSight scanned in " << std::fixed << std::setprecision(2) << secs << "s | "
                   << telemetry.dirsCount.load() << " dirs, "
-                  << telemetry.filesCount.load() << " files | "
-                  << "Threads=" << telemetry.threadsUsed << ", "
+                  << telemetry.filesCount.load() << " files";
+        if (telemetry.hardLinksCount.load() > 0) {
+            std::cerr << ", " << telemetry.hardLinksCount.load() << " hardlinks deduped ("
+                      << humanBytes(telemetry.hardLinksBytesSaved.load()) << " saved)";
+        }
+        std::cerr << " | Threads=" << telemetry.threadsUsed << ", "
                   << "Cluster=" << volInfo.clusterBytes << "B, "
                   << "BackupPriv=" << (telemetry.backupPrivilegeEnabled ? "ON" : "OFF") << "]\n";
     }

@@ -139,6 +139,7 @@ allocsight <command> [path] [options]
 | `--files` | *(none)* | `false` | Restrict `top` or `tree` output to regular files only. |
 | `--folders` | *(none)* | `false` | Restrict `top` or `tree` output to directories only. |
 | `--ads` | *(none)* | `false` | Inspect NTFS Alternate Data Streams via `FindFirstStreamW`. |
+| `--hardlinks` | *(none)* | `false` | Deduplicate NTFS hard links (avoids double counting in WinSxS/system folders). |
 | `--logical` | *(none)* | `false` | Sort and report by logical byte length instead of cluster-allocated size. |
 | `-j`, `--json` | *(none)* | `false` | Emit structured JSON output for programmatic or AI Agent consumption. |
 | `-q`, `--quiet` | *(none)* | `false` | Suppress scan telemetry summary on `stderr`. |
@@ -193,6 +194,10 @@ The `analyze` and `report` commands evaluate the scanned `FsNode` hierarchy agai
 | `duplicate_copy_folder` | `REVIEW` | Directories containing copy suffixes (`- Copy`, `- 副本`, `old_backup`) $\ge 50\text{ MB}$. |
 | `dev_artifacts` | `REVIEW` | Rebuildable build/dependency trees (`node_modules`, `.venv`, `venv`, `__pycache__`, `target`) $\ge 50\text{ MB}$. |
 | `large_archives_installers` | `REVIEW` | Standalone disk images, wheel packages, debug symbols, or installers (`.iso`, `.whl`, `.conda`, `.msi`, `.pdb`) $\ge 100\text{ MB}$. |
+| `wsl_docker_vhdx` | `REVIEW` | WSL2 or Docker virtual disk images (`ext4.vhdx` $\ge 2\text{ GB}$); reclaimable via `wsl --shutdown` and `diskpart compact`. |
+| `package_manager_caches` | `REVIEW` | Build tool, package manager, and ML model caches (`.gradle`, `.m2`, `go-build`, `huggingface` $\ge 50\text{ MB}$). |
+| `ide_system_caches` | `REVIEW` | IDE workspace and symbol indexing caches (`.vs`, `.idea`, `workspaceStorage` $\ge 50\text{ MB}$). |
+| `bloated_git_pack` | `REVIEW` | Bloated Git object pack storage (`.git/objects/pack` $\ge 200\text{ MB}$); reclaimable via `git gc --prune=now`. |
 | `stale_large_files` | `REVIEW` | Individual files $\ge 250\text{ MB}$ with last-write timestamps older than 180 days. |
 
 ---

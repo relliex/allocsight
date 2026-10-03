@@ -166,7 +166,7 @@ public:
                 const auto* n = items[i];
                 double pct = static_cast<double>(metricBytes(n, opts.useLogical)) * 100.0 / static_cast<double>(rootTotal);
                 out << "    {\"rank\": " << (i + 1)
-                    << ", \"type\": \"" << (n->isFile() ? "file" : "directory") << "\""
+                    << ", \"type\": \"" << (n->isHardLink ? "hardlink" : (n->isFile() ? "file" : "directory")) << "\""
                     << ", \"allocatedBytes\": " << n->allocatedBytes
                     << ", \"logicalBytes\": " << n->logicalBytes
                     << ", \"allocatedFormatted\": \"" << humanBytes(n->allocatedBytes) << "\""
@@ -186,9 +186,10 @@ public:
             int64_t sz = metricBytes(n, opts.useLogical);
             double pct = static_cast<double>(sz) * 100.0 / static_cast<double>(rootTotal);
             char line[128];
+            const char* typeTag = n->isHardLink ? "[HLINK]" : (n->isFile() ? "[FILE]" : "[DIR]");
             std::snprintf(line, sizeof(line), "%4zu  %-7s  %11s  %6.2f%%  %-11s  ",
                 i + 1,
-                n->isFile() ? "[FILE]" : "[DIR]",
+                typeTag,
                 humanBytes(sz).c_str(),
                 pct,
                 formatDateYMD(n->modifiedAt).c_str()
@@ -361,6 +362,27 @@ public:
                         return;
                     }
                 }
+                if (segLow == ".gradle" || segLow == "gradle_cache" ||
+                    segLow == "go-build" || segLow == ".m2" || segLow == ".nuget" ||
+                    segLow == "nuget_packages" || segLow == ".cargo_cache" ||
+                    segLow == "huggingface" || segLow == "torch_cache") {
+                    if (n->allocatedBytes >= 50LL * 1024 * 1024) {
+                        findings.push_back({"package_manager_caches", "REVIEW", "Package manager / ML cache (>= 50 MB); safe to delete if rebuild is planned", n});
+                        return;
+                    }
+                }
+                if (segLow == ".vs" || segLow == "workspacestorage" || segLow == ".idea") {
+                    if (n->allocatedBytes >= 50LL * 1024 * 1024) {
+                        findings.push_back({"ide_system_caches", "REVIEW", "IDE workspace / indexing cache (>= 50 MB); safe to delete and regenerate", n});
+                        return;
+                    }
+                }
+                if (segLow == "pack" && n->parent && asciiLower(wideToUtf8(n->parent->name)) == "objects") {
+                    if (n->allocatedBytes >= 200LL * 1024 * 1024) {
+                        findings.push_back({"bloated_git_pack", "REVIEW", "Large Git pack objects (>= 200 MB); run 'git gc --prune=now' to reclaim", n});
+                        return;
+                    }
+                }
             }
 
             // Inspect child files (including sibling-extracted archive detection)
@@ -368,6 +390,12 @@ public:
                 if (c->isFile()) {
                     if (c->allocatedBytes < 10LL * 1024 * 1024) continue;
                     std::string fLow = asciiLower(wideToUtf8(c->name));
+
+                    if (c->allocatedBytes >= 2LL * 1024 * 1024 * 1024 &&
+                        (fLow == "ext4.vhdx" || fLow.find("docker_data.vhdx") != std::string::npos || fLow.find("docker-desktop-data.vhdx") != std::string::npos)) {
+                        findings.push_back({"wsl_docker_vhdx", "REVIEW", "WSL2/Docker virtual disk (>= 2 GB); reclaimable via 'wsl --shutdown' + diskpart compact", c.get()});
+                        continue;
+                    }
 
                     if (QueryFilter::globMatch(fLow.c_str(), "*.log") ||
                         QueryFilter::globMatch(fLow.c_str(), "*.dmp") ||

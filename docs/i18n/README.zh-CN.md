@@ -139,6 +139,7 @@ allocsight <command> [path] [options]
 | `--files` | *(无)* | `false` | 在 `top` 或 `tree` 视图中仅包含普通文件。 |
 | `--folders` | *(无)* | `false` | 在 `top` 或 `tree` 视图中仅包含目录。 |
 | `--ads` | *(无)* | `false` | 使用 `FindFirstStreamW` 扫描 NTFS 备用数据流。 |
+| `--hardlinks` | *(无)* | `false` | 去重 NTFS 硬链接（防止 WinSxS / 系统目录重复累加物理大小）。 |
 | `--logical` | *(无)* | `false` | 按逻辑字节大小而非物理簇分配大小进行排序和展示。 |
 | `-j`, `--json` | *(无)* | `false` | 输出结构化 JSON，供程序或 AI Agent 解析调用。 |
 | `-q`, `--quiet` | *(无)* | `false` | 静默模式，不在 `stderr` 输出扫描耗时与遥测摘要。 |
@@ -193,6 +194,10 @@ allocsight top D:\ --files -f "category:AI Models; allocated>500mb; modified>30d
 | `duplicate_copy_folder` | `REVIEW` | 目录名包含副本标记（`- 副本`, `- Copy`, `old_backup`）且占用 $\ge 50\text{ MB}$。 |
 | `dev_artifacts` | `REVIEW` | 可通过包管理器或编译器随时重建的依赖与构建产物目录（`node_modules`, `.venv`, `venv`, `__pycache__`, `target`）且占用 $\ge 50\text{ MB}$。 |
 | `large_archives_installers` | `REVIEW` | 体积 $\ge 100\text{ MB}$ 的独立镜像、Python Wheel 包、调试符号或安装程序（`.iso`, `.whl`, `.conda`, `.msi`, `.pdb`）。 |
+| `wsl_docker_vhdx` | `REVIEW` | WSL2 或 Docker Desktop 虚拟磁盘镜像（`ext4.vhdx` $\ge 2\text{ GB}$）；可通过 `wsl --shutdown` 和 `diskpart compact` 回收稀疏空间。 |
+| `package_manager_caches` | `REVIEW` | 构建工具、包管理器与 AI 模型缓存（`.gradle`, `.m2`, `go-build`, `huggingface` $\ge 50\text{ MB}$）。 |
+| `ide_system_caches` | `REVIEW` | IDE 工作区索引与符号缓存（`.vs`, `.idea`, `workspaceStorage` $\ge 50\text{ MB}$）。 |
+| `bloated_git_pack` | `REVIEW` | 膨胀的 Git 对象包存储（`.git/objects/pack` $\ge 200\text{ MB}$）；可运行 `git gc --prune=now` 回收空间。 |
 | `stale_large_files` | `REVIEW` | 体积 $\ge 250\text{ MB}$ 且最后修改时间距今超过 180 天的陈旧文件。 |
 
 ---

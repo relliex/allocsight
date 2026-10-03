@@ -128,7 +128,8 @@ struct VolumeMetrics {
     int64_t totalCapacity  = 0;
     int64_t freeBytes      = 0;
     bool    supportsStreams = false;
-    bool    isVolumeRoot   = false;
+    bool    isVolumeRoot    = false;
+    DWORD   volumeSerialNumber = 0;
     std::string fileSystemName;
 
     VolumeMetrics() = default;
@@ -148,9 +149,11 @@ struct VolumeMetrics {
             }
             DWORD fsFlags = 0;
             wchar_t fsNameBuf[64]{};
-            if (GetVolumeInformationW(root.c_str(), nullptr, 0, nullptr, nullptr, &fsFlags, fsNameBuf, 64)) {
+            DWORD serial = 0;
+            if (GetVolumeInformationW(root.c_str(), nullptr, 0, &serial, nullptr, &fsFlags, fsNameBuf, 64)) {
                 supportsStreams = (fsFlags & FILE_NAMED_STREAMS) != 0;
                 fileSystemName = wideToUtf8(fsNameBuf);
+                volumeSerialNumber = serial;
             }
         }
     }
@@ -193,6 +196,7 @@ struct FsNode {
     FILETIME accessedAt{};
     FILETIME modifiedAt{};
     bool isAltStream       = false;
+    bool isHardLink        = false;
 
     FsNode* parent = nullptr;
     std::vector<std::unique_ptr<FsNode>> children;
@@ -246,7 +250,9 @@ struct FsNode {
             for (auto& c : children) {
                 c->aggregateBottomUp();
                 logTotal   += c->logicalBytes;
-                allocTotal += c->allocatedBytes;
+                if (!c->isHardLink) {
+                    allocTotal += c->allocatedBytes;
+                }
             }
             logicalBytes   = logTotal;
             allocatedBytes = allocTotal;

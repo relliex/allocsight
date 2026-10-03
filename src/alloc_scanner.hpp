@@ -8,7 +8,11 @@
 #include <mutex>
 #include <thread>
 #include <queue>
+#include <deque>
+#include <unordered_set>
 #include <condition_variable>
+#include <chrono>
+#include <io.h>
 
 #ifndef FILE_ATTRIBUTE_RECALL_ON_OPEN
 #define FILE_ATTRIBUTE_RECALL_ON_OPEN 0x00040000UL
@@ -21,6 +25,17 @@
 #endif
 
 namespace allocsight {
+
+// Global cancellation flag for graceful Ctrl+C handling
+inline std::atomic<bool> g_cancelRequested{false};
+
+inline BOOL WINAPI ConsoleCtrlHandler(DWORD ctrlType) {
+    if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_BREAK_EVENT) {
+        g_cancelRequested.store(true, std::memory_order_relaxed);
+        return TRUE;
+    }
+    return FALSE;
+}
 
 struct AltStreamEntry {
     std::wstring streamName;
@@ -58,6 +73,7 @@ public:
 
 struct ScanConfig {
     bool includeAltStreams = false;
+    bool detectHardLinks   = false;
     int  workerThreads     = 0; // 0 = auto-detect hardware concurrency (up to 16)
     int  maxScanDepth      = -1;
     bool quietMode         = false;
@@ -67,9 +83,12 @@ struct ScanTelemetry {
     std::atomic<uint64_t> filesCount{0};
     std::atomic<uint64_t> dirsCount{0};
     std::atomic<uint64_t> altStreamsCount{0};
+    std::atomic<uint64_t> hardLinksCount{0};
+    std::atomic<int64_t>  hardLinksBytesSaved{0};
     std::atomic<uint64_t> accessErrors{0};
     std::atomic<int64_t>  logicalTotal{0};
     std::atomic<int64_t>  allocatedTotal{0};
+    std::atomic<bool>     wasCancelled{false};
     bool backupPrivilegeEnabled = false;
     int  threadsUsed = 1;
 };
@@ -90,6 +109,21 @@ public:
             p.pop_back();
         }
         return p;
+    }
+
+    static inline bool needsPhysicalQuery(uint32_t attrs) {
+        return (attrs & (FILE_ATTRIBUTE_SPARSE_FILE | FILE_ATTRIBUTE_COMPRESSED)) != 0;
+    }
+
+    static inline int64_t computeAllocatedFast(
+        uint32_t attrs,
+        int64_t logicalSize,
+        const VolumeMetrics& vol
+    ) {
+        if ((attrs & (FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS | FILE_ATTRIBUTE_RECALL_ON_OPEN)) != 0) {
+            return 0;
+        }
+        return vol.alignToCluster(logicalSize);
     }
 
     static int64_t computeAllocatedBytes(
@@ -171,6 +205,9 @@ public:
         int busyWorkers = 0;
         bool finished = false;
 
+        std::mutex hardLinkMtx;
+        std::unordered_set<uint64_t> seenFileIds;
+
         taskQueue.push(DirTask{root.get(), norm, 0});
         telemetry.dirsCount.fetch_add(1, std::memory_order_relaxed);
 
@@ -179,16 +216,76 @@ public:
         std::vector<std::thread> pool;
         pool.reserve(nThreads);
 
+        std::atomic<bool> progressDone{false};
+        std::thread ticker;
+        bool isInteractive = (!cfg.quietMode && _isatty(_fileno(stderr)) != 0);
+        if (isInteractive) {
+            HANDLE hErr = GetStdHandle(STD_ERROR_HANDLE);
+            DWORD mode = 0;
+            if (GetConsoleMode(hErr, &mode)) {
+                SetConsoleMode(hErr, mode | 0x0004 /* ENABLE_VIRTUAL_TERMINAL_PROCESSING */);
+            }
+            ticker = std::thread([&]() {
+                auto t0 = std::chrono::steady_clock::now();
+                while (!progressDone.load(std::memory_order_relaxed)) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(120));
+                    if (progressDone.load(std::memory_order_relaxed)) break;
+                    auto now = std::chrono::steady_clock::now();
+                    double sec = std::chrono::duration<double>(now - t0).count();
+                    uint64_t fc = telemetry.filesCount.load(std::memory_order_relaxed);
+                    uint64_t dc = telemetry.dirsCount.load(std::memory_order_relaxed);
+                    int64_t allocTot = telemetry.allocatedTotal.load(std::memory_order_relaxed);
+                    std::fprintf(stderr, "\r\x1b[2K[Scanning: %llu files, %llu dirs | %s | %.1fs | %d threads] ",
+                                 static_cast<unsigned long long>(fc),
+                                 static_cast<unsigned long long>(dc),
+                                 humanBytes(allocTot).c_str(),
+                                 sec,
+                                 telemetry.threadsUsed);
+                    std::fflush(stderr);
+                }
+                std::fprintf(stderr, "\r\x1b[2K");
+                std::fflush(stderr);
+            });
+        }
+
         auto workerLoop = [&]() {
+            std::vector<DirTask> localTasks;
+
             while (true) {
-                DirTask task{};
-                {
+                if (g_cancelRequested.load(std::memory_order_relaxed)) {
+                    telemetry.wasCancelled.store(true, std::memory_order_relaxed);
                     std::unique_lock<std::mutex> lk(mtx);
-                    cv.wait(lk, [&]() { return !taskQueue.empty() || finished; });
+                    finished = true;
+                    cv.notify_all();
+                    return;
+                }
+
+                DirTask task{};
+                if (!localTasks.empty()) {
+                    task = std::move(localTasks.back());
+                    localTasks.pop_back();
+                } else {
+                    std::unique_lock<std::mutex> lk(mtx);
+                    cv.wait(lk, [&]() {
+                        return !taskQueue.empty() || finished || g_cancelRequested.load(std::memory_order_relaxed);
+                    });
+                    if (g_cancelRequested.load(std::memory_order_relaxed)) {
+                        telemetry.wasCancelled.store(true, std::memory_order_relaxed);
+                        finished = true;
+                        cv.notify_all();
+                        return;
+                    }
                     if (taskQueue.empty() && finished) return;
-                    task = std::move(taskQueue.front());
-                    taskQueue.pop();
+
+                    // Batch dequeue up to 4 tasks from global queue to minimize lock contention
+                    size_t batch = (std::min)(size_t(4), taskQueue.size());
+                    for (size_t b = 0; b < batch; ++b) {
+                        localTasks.push_back(std::move(taskQueue.front()));
+                        taskQueue.pop();
+                    }
                     ++busyWorkers;
+                    task = std::move(localTasks.back());
+                    localTasks.pop_back();
                 }
 
                 std::wstring pattern = (task.dirPath.rfind(L"\\\\?\\", 0) == 0)
@@ -233,9 +330,14 @@ public:
                         }
 
                         std::wstring segName(entryName);
-                        std::wstring childFullPath = task.dirPath + L"\\" + segName;
+                        bool isDir = (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+                        bool needsPath = isDir || checkStreams || cfg.detectHardLinks || needsPhysicalQuery(fd.dwFileAttributes);
+                        std::wstring childFullPath;
+                        if (needsPath) {
+                            childFullPath = task.dirPath + L"\\" + segName;
+                        }
 
-                        if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+                        if (isDir) {
                             auto dirNode = std::make_unique<FsNode>();
                             dirNode->kind = EntryKind::Directory;
                             dirNode->name = segName;
@@ -270,7 +372,9 @@ public:
                             }
                         } else {
                             int64_t logSz = (static_cast<int64_t>(fd.nFileSizeHigh) << 32) | static_cast<int64_t>(fd.nFileSizeLow);
-                            int64_t allocSz = computeAllocatedBytes(childFullPath, fd.dwFileAttributes, logSz, vol);
+                            int64_t allocSz = needsPhysicalQuery(fd.dwFileAttributes)
+                                ? computeAllocatedBytes(childFullPath, fd.dwFileAttributes, logSz, vol)
+                                : computeAllocatedFast(fd.dwFileAttributes, logSz, vol);
 
                             auto fileNode = std::make_unique<FsNode>();
                             fileNode->kind = EntryKind::RegularFile;
@@ -281,6 +385,36 @@ public:
                             fileNode->createdAt = fd.ftCreationTime;
                             fileNode->accessedAt = fd.ftLastAccessTime;
                             fileNode->modifiedAt = fd.ftLastWriteTime;
+
+                            if (cfg.detectHardLinks && !childFullPath.empty()) {
+                                std::wstring longP = (childFullPath.rfind(L"\\\\?\\", 0) == 0) ? childFullPath : (L"\\\\?\\" + childFullPath);
+                                HANDLE hF = CreateFileW(
+                                    longP.c_str(),
+                                    FILE_READ_ATTRIBUTES,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                    nullptr,
+                                    OPEN_EXISTING,
+                                    FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                                    nullptr
+                                );
+                                if (hF != INVALID_HANDLE_VALUE) {
+                                    BY_HANDLE_FILE_INFORMATION bhfi{};
+                                    if (GetFileInformationByHandle(hF, &bhfi) && bhfi.nNumberOfLinks > 1) {
+                                        uint64_t fid = (static_cast<uint64_t>(bhfi.nFileIndexHigh) << 32) | bhfi.nFileIndexLow;
+                                        bool isDup = false;
+                                        {
+                                            std::lock_guard<std::mutex> lk(hardLinkMtx);
+                                            isDup = !seenFileIds.insert(fid).second;
+                                        }
+                                        if (isDup) {
+                                            fileNode->isHardLink = true;
+                                            telemetry.hardLinksCount.fetch_add(1, std::memory_order_relaxed);
+                                            telemetry.hardLinksBytesSaved.fetch_add(allocSz, std::memory_order_relaxed);
+                                        }
+                                    }
+                                    CloseHandle(hF);
+                                }
+                            }
 
                             if (checkStreams) {
                                 for (const auto& s : NtfsStreamInspector::enumerateStreams(childFullPath, fd.dwFileAttributes)) {
@@ -312,16 +446,28 @@ public:
                     task.dirNode->appendChild(std::move(child));
                 }
 
-                {
+                // Hybrid work distribution: keep up to 2 tasks in localTasks (LIFO), push excess to global queue
+                if (!childTasks.empty()) {
+                    size_t keep = (std::min)(size_t(2), childTasks.size());
+                    for (size_t k = 0; k < keep; ++k) {
+                        localTasks.push_back(std::move(childTasks.back()));
+                        childTasks.pop_back();
+                    }
+                }
+
+                if (!childTasks.empty()) {
                     std::unique_lock<std::mutex> lk(mtx);
                     for (auto& ct : childTasks) {
                         taskQueue.push(std::move(ct));
                     }
+                    cv.notify_all();
+                }
+
+                if (localTasks.empty()) {
+                    std::unique_lock<std::mutex> lk(mtx);
                     --busyWorkers;
                     if (taskQueue.empty() && busyWorkers == 0) {
                         finished = true;
-                        cv.notify_all();
-                    } else if (!childTasks.empty()) {
                         cv.notify_all();
                     }
                 }
@@ -333,6 +479,16 @@ public:
         }
         for (auto& t : pool) {
             t.join();
+        }
+
+        if (isInteractive && ticker.joinable()) {
+            progressDone.store(true, std::memory_order_relaxed);
+            ticker.join();
+        }
+
+        if (telemetry.wasCancelled.load(std::memory_order_relaxed)) {
+            std::fprintf(stderr, "\n[AllocSight: Scan interrupted by Ctrl+C. Compiling partial report...]\n");
+            std::fflush(stderr);
         }
 
         root->aggregateBottomUp();
