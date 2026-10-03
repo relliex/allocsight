@@ -6,9 +6,10 @@ cmake-build-*/
 *.pdb
 *.log
 
-# Compiled binaries
+# Compiled binaries & archives
 *.exe
 *.dll
+*.zip
 
 # Local scan reports & user-specific outputs (prevent accidental privacy leaks)
 *report*.md
