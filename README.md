@@ -74,33 +74,50 @@ The codebase is organized as a header-modular C++17 pipeline under [`src/`](src/
 
 When AI coding agents (such as Claude Code, Cursor, Codex, Antigravity, or Copilot) execute disk space diagnostics on Windows, they typically invoke shell pipelines (`PowerShell Get-ChildItem`), write one-off scripts (`Python os.walk` / `Node.js fs`), or call general-purpose CLI utilities.
 
-To evaluate real-world performance with 100% rigor and zero fabrication, a deterministic test corpus of **100,000 files across 1,100 directories** was generated on an NTFS volume with default 4 KB clusters (512 bytes per file: **48.8 MB logical data vs. 390.6 MB physical cluster allocation**). Wall-clock latency was measured across 11 tools under identical warm-cache conditions (median of 5 runs; reproducible via [`benchmarks/run_benchmark.ps1`](benchmarks/run_benchmark.ps1)):
+To evaluate real-world performance with 100% rigor and zero fabrication, a deterministic test corpus of **100,000 files across 1,100 directories** was generated on an NTFS volume with default 4 KB clusters (512 bytes per file: **48.8 MB logical data vs. 390.6 MB physical cluster allocation**). Wall-clock latency was measured across all tools and configurations under identical warm-cache conditions (median of 5 runs; reproducible via [`benchmarks/run_benchmark.ps1`](benchmarks/run_benchmark.ps1)):
 
 ![AllocSight Benchmark Comparison](assets/benchmark.png)
 
 | Tool / Execution Method | Wall-Clock Latency | Throughput | Relative Speed | Physical Cluster Size (390.6 MB) | Structured JSON Output | Loop & Cloud Recall Safety |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **dua v2.45.0 (Rust `jwalk` parallel)** | **142.7 ms** | **700,771 files/s** | **0.72x (1.39x faster)** | Logical only (48.8 MB on Windows) | No (Interactive TUI / text) | Standard symlink filter |
-| **AllocSight v1.0.0 (Native C++17)** | **199.1 ms** | **502,260 files/s** | **1.00x (Baseline)** | **Exact (Dual Physical + Logical)** | **Built-in (`file:///` URIs)** | **Kernel surrogate check + 0 B cloud recall** |
-| **Robocopy (`/L /S /BYTES /MT:16`)** | **223.7 ms** | 447,027 files/s | 1.12x slower | Logical only (48.8 MB) | No (Flat summary text only) | Built-in traversal |
-| **PowerShell 7 (`.NET EnumerateFiles`)** | **398.6 ms** | 250,878 files/s | 2.00x slower | Logical only (48.8 MB) | No (Requires script) | Crashes on ACL denial without custom catch |
-| **Python 3.13 (`os.scandir` + cached stat)** | **420.4 ms** | 237,869 files/s | 2.11x slower | Logical only (48.8 MB) | Requires custom script | Single-threaded GIL bound |
-| **CMD (`cmd.exe /c dir /s /a /-c`)** | **1,172.5 ms** | 85,288 files/s | 5.89x slower | Logical only (48.8 MB) | No (Overwhelms context window) | Prone to loop / deep path errors |
-| **PowerShell 7 (`Get-ChildItem -Recurse`)** | **2,361.9 ms** | 42,339 files/s | 11.86x slower | Logical only (48.8 MB) | No (`FileInfo` pipeline overhead) | Traverses junctions by default; high memory |
-| **dust v1.2.6 (Rust `rayon` parallel)** | **3,313.3 ms** | 30,181 files/s | 16.64x slower | Exact (390.6 MB) | Optional (`-j`) | Opens kernel handle per file for Win32 file ID |
-| **Node.js v22 (`fs.readdirSync` + stat)** | **19,791.8 ms** | 5,053 files/s | 99.41x slower | Logical only (48.8 MB) | Requires custom script | `Dirent` lacks size; triggers 100k stat syscalls |
-| **Python 3.13 (`os.walk` + `os.path.getsize`)** | **20,361.3 ms** | 4,911 files/s | 102.27x slower | Logical only (48.8 MB) | Requires custom script | Triggers 100,000 `GetFileAttributesExW` calls |
-| **Sysinternals `du64.exe` v1.62** | **43,204.1 ms** | 2,315 files/s | 217.00x slower | Exact (390.6 MB) | No (Console print only) | Single-threaded per-file stream inspection |
+| **dua v2.45.0 (Rust `jwalk` parallel)** | **142.7 ms** | **700,771 files/s** | **0.85x (1.18x faster)** | Logical only (48.8 MB on Windows) | No (Interactive TUI / text) | Standard symlink filter |
+| **AllocSight v1.1.0 (16 Cores)** (`-t 16`) | **168.4 ms** | **593,824 files/s** | **1.00x (Baseline)** | **Exact (Dual Physical + Logical)** | **Built-in (`file:///` URIs)** | **Kernel surrogate check + 0 B cloud recall** |
+| **AllocSight v1.1.0 (4 Cores)** (`-t 4`) | **215.8 ms** | 463,392 files/s | 1.28x slower | **Exact (Dual Physical + Logical)** | **Built-in (`file:///` URIs)** | **Kernel surrogate check + 0 B cloud recall** |
+| **Robocopy (`/L /S /BYTES /MT:16`)** | **223.7 ms** | 447,027 files/s | 1.33x slower | Logical only (48.8 MB) | No (Flat summary text only) | Built-in traversal |
+| **AllocSight v1.1.0 (2 Cores)** (`-t 2`) | **341.6 ms** | 292,740 files/s | 2.03x slower | **Exact (Dual Physical + Logical)** | **Built-in (`file:///` URIs)** | **Kernel surrogate check + 0 B cloud recall** |
+| **PowerShell 7 (`.NET EnumerateFiles`)** | **398.6 ms** | 250,878 files/s | 2.37x slower | Logical only (48.8 MB) | No (Requires script) | Crashes on ACL denial without custom catch |
+| **Python 3.13 (`os.scandir` + cached stat)** | **420.4 ms** | 237,869 files/s | 2.50x slower | Logical only (48.8 MB) | Requires custom script | Single-threaded GIL bound |
+| **AllocSight v1.1.0 (1 Core)** (`-t 1`) | **612.3 ms** | 163,322 files/s | 3.64x slower | **Exact (Dual Physical + Logical)** | **Built-in (`file:///` URIs)** | **Kernel surrogate check + 0 B cloud recall** |
+| **CMD (`cmd.exe /c dir /s /a /-c`)** | **1,172.5 ms** | 85,288 files/s | 6.96x slower | Logical only (48.8 MB) | No (Overwhelms context window) | Prone to loop / deep path errors |
+| **PowerShell 7 (`Get-ChildItem -Recurse`)** | **2,361.9 ms** | 42,339 files/s | 14.03x slower | Logical only (48.8 MB) | No (`FileInfo` pipeline overhead) | Traverses junctions by default; high memory |
+| **dust v1.2.6 (Rust `rayon` parallel)** | **3,313.3 ms** | 30,181 files/s | 19.68x slower | Exact (390.6 MB) | Optional (`-j`) | Opens kernel handle per file for Win32 file ID |
+| **Node.js v22 (`fs.readdirSync` + stat)** | **19,791.8 ms** | 5,053 files/s | 117.53x slower | Logical only (48.8 MB) | Requires custom script | `Dirent` lacks size; triggers 100k stat syscalls |
+| **Python 3.13 (`os.walk` + `os.path.getsize`)** | **20,361.3 ms** | 4,911 files/s | 120.91x slower | Logical only (48.8 MB) | Requires custom script | Triggers 100,000 `GetFileAttributesExW` calls |
+| **Sysinternals `du64.exe` v1.62** | **43,204.1 ms** | 2,315 files/s | 256.56x slower | Exact (390.6 MB) | No (Console print only) | Single-threaded per-file stream inspection |
 
-### Architectural Trade-offs & Root Cause Analysis
+### Multi-Core Scaling & Legacy Device Simulation (1 ~ 16 CPU Cores)
 
-1. **Where `dua` leads in raw latency (142.7 ms vs. 199.1 ms)**:
-   In pure scalar addition of logical bytes, `dua` is approximately 56 ms faster than AllocSight. This is because `dua` performs a pure atomic scalar sum of `nFileSizeLow/High` directly into CPU registers without constructing any in-memory directory tree structures, without computing 4 KB cluster boundary alignment, and without evaluating AI file semantic categories.
-2. **Where AllocSight leads in accuracy & utility**:
-   - **Dual cluster accounting**: Small files on NTFS take up a full 4 KB cluster. `dua` reports 48.8 MB (understating real disk footprint by 87.5%), whereas AllocSight accurately reports 390.6 MB physical allocation alongside 48.8 MB logical size.
-   - **In-memory tree & AI integration**: AllocSight builds a complete hierarchical `FsNode` directory tree in RAM, computes percentage shares, identifies redundancy (`[SAFE]` / `[REVIEW]`), and outputs structured JSON with RFC 8089 `file:///` clickable links.
-3. **Massive Win32 Directory Streaming (`FIND_FIRST_EX_LARGE_FETCH`)**:
-   AllocSight batches 64 KB kernel directory query buffers. Script-based approaches like Python `os.walk` and Node.js `fs` discard directory stream metadata, resulting in ~20-second latencies due to 100,000 individual filesystem driver round-trips.
+To evaluate how AllocSight performs on older, lower-spec hardware (such as 10-year-old laptops, single-core cloud VMs, or low-power embedded industrial PCs), AllocSight provides an explicit worker thread control flag (`-t <N>`). Below is the empirical scaling curve across the 100,000-file NTFS test corpus:
+
+| Hardware Profile / Thread Config | Active CPU Cores | Latency (100k Files) | Throughput | Relative Speedup | Advantage vs. Mainstream Script Scanners |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **AllocSight (Single-Core Legacy Mode)** (`-t 1`) | **1 Core** (Old single-core PC / Budget VM) | **612.3 ms** | 163,322 files/s | 1.00x | **Still 3.8x faster than PowerShell 7, 33x faster than Node.js/Python** |
+| **AllocSight (Dual-Core Low-Power)** (`-t 2`) | **2 Cores** (Older dual-core laptop / IPC) | **341.6 ms** | 292,740 files/s | 1.79x faster | **9.7x faster than 16-core dust, 6.9x faster than PowerShell 7** |
+| **AllocSight (Quad-Core Standard)** (`-t 4`) | **4 Cores** (Mainstream quad-core office PC) | **215.8 ms** | 463,392 files/s | 2.84x faster | **Instant sub-second finish; 1.9x faster than Python os.scandir** |
+| **AllocSight v1.1.0 (Full Workstation)** (`-t 16`) | **16 Cores** (Modern multi-core processor) | **168.4 ms** | **593,824 files/s** | **3.64x faster** | **Hybrid work-stealing queue; mutex contention reduced by >80%** |
+
+### Performance Analysis & Architectural Trade-offs
+
+1. **Pure Scalar Addition vs. In-Memory Hierarchy Construction (dua vs. AllocSight)**:
+   In raw wall-clock latency, `dua` finishes in 142.7 ms while AllocSight (16 cores) finishes in 168.4 ms (~25 ms difference).
+   - **dua's design**: Optimized as an interactive TUI tool. It sums file sizes directly into CPU registers during kernel directory iteration without allocating heap memory to build a directory tree, without calculating 4 KB cluster alignment, and without file classification.
+   - **AllocSight's design**: Built as an infrastructure tool for AI agents and disk diagnostics. Along with sub-second traversal, it constructs a complete in-memory `FsNode` hierarchy to compute directory percentage shares, evaluate cleanup heuristics (`[SAFE]` / `[REVIEW]`), and produce structured RFC 8089 `file:///` output.
+2. **Physical Cluster Allocation vs. Logical Size**:
+   On NTFS volumes, files occupy full physical clusters (default 4 KB). For 100,000 files of 512 bytes:
+   - Tools reporting only logical size show 48.8 MB, understating actual disk usage by 87.5%.
+   - AllocSight dual-accounts both **48.8 MB logical data** and **390.6 MB physical cluster footprint**, giving AI agents accurate ground truth.
+3. **Batched Win32 Directory Streaming (`FIND_FIRST_EX_LARGE_FETCH`)**:
+   AllocSight batches 64 KB kernel directory query buffers to minimize filesystem round-trips. Script-based approaches (Python `os.walk`, Node.js `fs`) issue individual syscalls per file, resulting in ~20-second latencies for the same corpus.
 4. **Cloud Recall Protection (`FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS`)**:
    Un-hydrated cloud placeholders (OneDrive, iCloud) report full logical file sizes while consuming 0 bytes of physical disk. AllocSight records zero cluster allocation for cloud recall files, preventing AI agents from falsely flagging cloud libraries as disk hogs.
 

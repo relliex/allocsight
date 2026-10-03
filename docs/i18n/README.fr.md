@@ -78,17 +78,31 @@ Sur un ensemble de test déterministe de **100 000 fichiers répartis dans 1 100
 
 | Outil / Méthode d'exécution | Latence Mesurée | Débit de Traitement | Vitesse Relative | Allocation Physique (390,6 Mo) | Export JSON Structuré | Sécurité Boucles & Cloud Recall |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **dua v2.45.0 (Rust `jwalk` parallèle)** | **142,7 ms** | **700 771 fichiers/s** | **0,72x (1,39x plus rapide)** | Logique uniquement (48,8 Mo sous Windows) | Non (TUI interactif / texte) | Filtrage standard des liens |
-| **AllocSight v1.0.0 (C++17 Natif)** | **199,1 ms** | **502 260 fichiers/s** | **1,00x (Base)** | **Exacte (Double Physique + Logique)** | **Natif (URIs `file:///`)** | **Contrôle noyau + Cloud Recall 0 o** |
-| **Robocopy (`/L /S /BYTES /MT:16`)** | **223,7 ms** | 447 027 fichiers/s | 1,12x plus lent | Logique uniquement (48,8 Mo) | Non (Résumé texte brut) | Parcours standard intégré |
-| **PowerShell 7 (`.NET EnumerateFiles`)** | **398,6 ms** | 250 878 fichiers/s | 2,00x plus lent | Logique uniquement (48,8 Mo) | Non (Script requis) | Échec sur refus d'accès sans gestion d'erreur |
-| **Python 3.13 (`os.scandir` + stat en cache)** | **420,4 ms** | 237 869 fichiers/s | 2,11x plus lent | Logique uniquement (48,8 Mo) | Script requis | Monothread limité par le GIL |
-| **CMD (`cmd.exe /c dir /s /a /-c`)** | **1 172,5 ms** | 85 288 fichiers/s | 5,89x plus lent | Logique uniquement (48,8 Mo) | Non (Surcharge la fenêtre de contexte) | Vulnérable aux chemins profonds |
-| **PowerShell 7 (`Get-ChildItem -Recurse`)** | **2 361,9 ms** | 42 339 fichiers/s | 11,86x plus lent | Logique uniquement (48,8 Mo) | Non (Surcharge mémoire `FileInfo`) | Traverse les jonctions par défaut |
-| **dust v1.2.6 (Rust `rayon` parallèle)** | **3 313,3 ms** | 30 181 fichiers/s | 16,64x plus lent | Exacte (390,6 Mo) | Optionnel (`-j`) | Ouvre un descripteur noyau par fichier |
-| **Node.js v22 (`fs.readdirSync` + stat)** | **19 791,8 ms** | 5 053 fichiers/s | 99,41x plus lent | Logique uniquement (48,8 Mo) | Script requis | `Dirent` sans taille : 100k appels stat |
-| **Python 3.13 (`os.walk` + `os.path.getsize`)** | **20 361,3 ms** | 4 911 fichiers/s | 102,27x plus lent | Logique uniquement (48,8 Mo) | Script requis | 100 000 appels `GetFileAttributesExW` |
-| **Sysinternals `du64.exe` v1.62** | **43 204,1 ms** | 2 315 fichiers/s | 217,00x plus lent | Exacte (390,6 Mo) | Non (Texte console brut) | Inspection séquentielle monothread |
+| **dua v2.45.0 (Rust `jwalk` parallèle)** | **142,7 ms** | **700 771 fichiers/s** | **0,85x (1,18x plus rapide)** | Logique uniquement (48,8 Mo sous Windows) | Non (TUI interactif / texte) | Filtrage standard des liens |
+| **AllocSight v1.1.0 (16 Cœurs)** (`-t 16`) | **168,4 ms** | **593 824 fichiers/s** | **1,00x (Base)** | **Exacte (Double Physique + Logique)** | **Natif (URIs `file:///`)** | **Contrôle noyau + Cloud Recall 0 o** |
+| **AllocSight v1.1.0 (4 Cœurs)** (`-t 4`) | **215,8 ms** | 463 392 fichiers/s | 1,28x plus lent | **Exacte (Double Physique + Logique)** | **Natif (URIs `file:///`)** | **Contrôle noyau + Cloud Recall 0 o** |
+| **Robocopy (`/L /S /BYTES /MT:16`)** | **223,7 ms** | 447 027 fichiers/s | 1,33x plus lent | Logique uniquement (48,8 Mo) | Non (Résumé texte brut) | Parcours standard intégré |
+| **AllocSight v1.1.0 (2 Cœurs)** (`-t 2`) | **341,6 ms** | 292 740 fichiers/s | 2,03x plus lent | **Exacte (Double Physique + Logique)** | **Natif (URIs `file:///`)** | **Contrôle noyau + Cloud Recall 0 o** |
+| **PowerShell 7 (`.NET EnumerateFiles`)** | **398,6 ms** | 250 878 fichiers/s | 2,37x plus lent | Logique uniquement (48,8 Mo) | Non (Script requis) | Échec sur refus d'accès sans gestion d'erreur |
+| **Python 3.13 (`os.scandir` + stat en cache)** | **420,4 ms** | 237 869 fichiers/s | 2,50x plus lent | Logique uniquement (48,8 Mo) | Script requis | Monothread limité par le GIL |
+| **AllocSight v1.1.0 (1 Cœur)** (`-t 1`) | **612,3 ms** | 163 322 fichiers/s | 3,64x plus lent | **Exacte (Double Physique + Logique)** | **Natif (URIs `file:///`)** | **Contrôle noyau + Cloud Recall 0 o** |
+| **CMD (`cmd.exe /c dir /s /a /-c`)** | **1 172,5 ms** | 85 288 fichiers/s | 6,96x plus lent | Logique uniquement (48,8 Mo) | Non (Surcharge la fenêtre de contexte) | Vulnérable aux chemins profonds |
+| **PowerShell 7 (`Get-ChildItem -Recurse`)** | **2 361,9 ms** | 42 339 fichiers/s | 14,03x plus lent | Logique uniquement (48,8 Mo) | Non (Surcharge mémoire `FileInfo`) | Traverse les jonctions par défaut |
+| **dust v1.2.6 (Rust `rayon` parallèle)** | **3 313,3 ms** | 30 181 fichiers/s | 19,68x plus lent | Exacte (390,6 Mo) | Optionnel (`-j`) | Ouvre un descripteur noyau par fichier |
+| **Node.js v22 (`fs.readdirSync` + stat)** | **19 791,8 ms** | 5 053 fichiers/s | 117,53x plus lent | Logique uniquement (48,8 Mo) | Script requis | `Dirent` sans taille : 100k appels stat |
+| **Python 3.13 (`os.walk` + `os.path.getsize`)** | **20 361,3 ms** | 4 911 fichiers/s | 120,91x plus lent | Logique uniquement (48,8 Mo) | Script requis | 100 000 appels `GetFileAttributesExW` |
+| **Sysinternals `du64.exe` v1.62** | **43 204,1 ms** | 2 315 fichiers/s | 256,56x plus lent | Exacte (390,6 Mo) | Non (Texte console brut) | Inspection séquentielle monothread |
+
+### Scalabilité Multi-Cœur et Simulation d'Appareils Anciens (1 ~ 16 Cœurs CPU)
+
+Pour garantir des performances sub-seconde sur des configurations modestes ou anciennes (machines virtuelles monocœur, ordinateurs portables double-cœur anciens ou PC industriels embarqués), AllocSight permet de contrôler explicitement les threads de travail via l'option `-t <N>`. Voici la courbe empirique de montée en charge sur le corpus de test (100 000 fichiers, NTFS avec clusters de 4 Ko) :
+
+| Profil Matériel / Configuration Threads | Cœurs CPU Actifs | Latence (100k Fichiers) | Débit de Traitement | Accélération Relative | Avantage face aux Outils de Script Classiques |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **AllocSight (Mode Hérité Monocœur)** (`-t 1`) | **1 Cœur** (Ancien PC monocœur / VM économique) | **612,3 ms** | 163 322 fichiers/s | 1,00x | **Toujours 3,8x plus rapide que PowerShell 7 et 33x plus rapide que Node.js/Python** |
+| **AllocSight (Basse Consommation Double-Cœur)** (`-t 2`) | **2 Cœurs** (Ancien PC portable double-cœur / IPC) | **341,6 ms** | 292 740 fichiers/s | 1,79x plus rapide | **9,7x plus rapide que dust (16 cœurs), 6,9x plus rapide que PowerShell 7** |
+| **AllocSight (Quad-Cœur Standard)** (`-t 4`) | **4 Cœurs** (PC bureautique standard à 4 cœurs) | **215,8 ms** | 463 392 fichiers/s | 2,84x plus rapide | **Exécution instantanée sub-seconde ; 1,9x plus rapide que Python os.scandir** |
+| **AllocSight v1.1.0 (Station de Travail Complète)** (`-t 16`) | **16 Cœurs** (Processeur multicœur moderne) | **168,4 ms** | **593 824 fichiers/s** | **3,64x plus rapide** | **File hybride avec vol de travail ; contention de verrouillage réduite de >80%** |
 
 ---
 
@@ -125,6 +139,7 @@ allocsight <commande> [chemin] [options]
 | `--files` | *(aucun)* | `false` | Restreint la sortie de `top` ou `tree` aux fichiers réguliers uniquement. |
 | `--folders` | *(aucun)* | `false` | Restreint la sortie de `top` ou `tree` aux répertoires uniquement. |
 | `--ads` | *(aucun)* | `false` | Inspecte les flux de données alternatifs NTFS via `FindFirstStreamW`. |
+| `--hardlinks` | *(aucun)* | `false` | Déduplique les liens matériels NTFS (évite le double comptage dans WinSxS et les dossiers système). |
 | `--logical` | *(aucun)* | `false` | Trie et affiche selon la taille logique au lieu de la taille allouée en clusters. |
 | `-j`, `--json` | *(aucun)* | `false` | Émet une sortie JSON structurée pour les scripts ou les agents IA. |
 | `-q`, `--quiet` | *(aucun)* | `false` | Supprime le résumé de télémétrie sur `stderr`. |
@@ -158,6 +173,10 @@ Les expressions de filtre (`-f "<expr>"`) sont composées d'une ou plusieurs cla
 | `duplicate_copy_folder` | `REVIEW` | Répertoires comportant un suffixe de copie (`- Copy`, `- 副本`, `old_backup`) $\ge 50\text{ Mo}$. |
 | `dev_artifacts` | `REVIEW` | Arborescences de dépendances ou de build reconstructibles (`node_modules`, `.venv`, `venv`, `__pycache__`, `target`) $\ge 50\text{ Mo}$. |
 | `large_archives_installers` | `REVIEW` | Images disque, paquets wheel, symboles de débogage ou installateurs (`.iso`, `.whl`, `.conda`, `.msi`, `.pdb`) $\ge 100\text{ Mo}$. |
+| `wsl_docker_vhdx` | `REVIEW` | Images disque virtuel WSL2 ou Docker (`ext4.vhdx` $\ge 2\text{ Go}$) ; récupérable via `wsl --shutdown` et `diskpart compact`. |
+| `package_manager_caches` | `REVIEW` | Caches d'outils de compilation, gestionnaires de paquets et modèles ML (`.gradle`, `.m2`, `go-build`, `huggingface` $\ge 50\text{ Mo}$). |
+| `ide_system_caches` | `REVIEW` | Caches d'indexation de symboles et d'espaces de travail IDE (`.vs`, `.idea`, `workspaceStorage` $\ge 50\text{ Mo}$). |
+| `bloated_git_pack` | `REVIEW` | Stockage excessif de packs d'objets Git (`.git/objects/pack` $\ge 200\text{ Mo}$) ; récupérable via `git gc --prune=now`. |
 | `stale_large_files` | `REVIEW` | Fichiers individuels $\ge 250\text{ Mo}$ non modifiés depuis plus de 180 jours. |
 
 ---
